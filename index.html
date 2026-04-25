@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Study Buddy Pro+</title>
+
+<style>
+:root{
+    --bg:#0b1220;
+    --card:#111a2e;
+    --text:#e6f0ff;
+    --accent:#3b82f6;
+}
+
+body.light{
+    --bg:#eaf2ff;
+    --card:#ffffff;
+    --text:#0f172a;
+    --accent:#2563eb;
+}
+
+body{
+    margin:0;
+    font-family:Arial;
+    background:var(--bg);
+    color:var(--text);
+    transition:0.3s;
+}
+
+h1{
+    text-align:center;
+    margin:10px;
+    font-size:26px;
+}
+
+.topbar{
+    position:fixed;
+    top:10px;
+    right:10px;
+    z-index:1000;
+}
+
+.settingsBtn{
+    width:44px;
+    height:44px;
+    border-radius:50%;
+    border:none;
+    background:var(--accent);
+    color:white;
+    font-size:18px;
+}
+
+.screens{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    overflow-y:auto;
+}
+
+.screen{
+    min-height:100vh;
+    padding:20px;
+    box-sizing:border-box;
+}
+
+.card{
+    background:var(--card);
+    margin:15px auto;
+    padding:18px;
+    border-radius:16px;
+    max-width:420px;
+}
+
+button{
+    padding:12px;
+    margin:6px;
+    border:none;
+    border-radius:10px;
+    background:var(--accent);
+    color:white;
+    font-size:14px;
+}
+
+input{
+    padding:12px;
+    border-radius:8px;
+    border:none;
+    width:75%;
+    font-size:14px;
+}
+
+ul{list-style:none;padding:0;}
+li{
+    background:rgba(59,130,246,0.15);
+    margin:6px;
+    padding:10px;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    font-size:15px;
+}
+
+#timerMain{
+    font-size:54px;
+    text-align:center;
+    margin:15px 0;
+}
+
+.topInfo{
+    text-align:center;
+    font-size:16px;
+    opacity:0.85;
+}
+
+.selected{
+    outline:2px solid white;
+}
+
+</style>
+</head>
+<body>
+
+<div class="topbar">
+    <button class="settingsBtn" onclick="openSettings()">⚙</button>
+</div>
+
+<div class="screens">
+
+<!-- TIMER -->
+<div class="screen">
+<h1>📚 Study Buddy</h1>
+
+<div class="card">
+<div class="topInfo" id="selectedInfo">Selected: 30 min</div>
+
+<h3>Choose Study Time</h3>
+<div id="studyOptions"></div>
+
+<h4>Break (min)</h4>
+<input id="breakTime" type="number" value="5" min="1" />
+
+<div id="timerMain">Ready</div>
+
+<button onclick="startSession()">Start</button>
+<button onclick="pauseTimer()">Pause</button>
+<button onclick="resetTimer()">Reset</button>
+</div>
+</div>
+
+<!-- TASKS -->
+<div class="screen">
+<div class="card">
+<h3>✅ Task List</h3>
+<input id="task" placeholder="Add task" />
+<button onclick="addTask()">Add</button>
+<ul id="list"></ul>
+</div>
+</div>
+
+</div>
+
+<!-- SETTINGS -->
+<div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;">
+<div style="background:var(--card);padding:20px;border-radius:12px;width:260px;">
+<h3>Settings</h3>
+<button onclick="toggleSound()">🔊 Sound: <span id="soundState">ON</span></button>
+<button onclick="toggleMode()">🌗 Theme</button>
+<br><br>
+<button onclick="closeSettings()">Close</button>
+</div>
+</div>
+
+<script>
+
+function openSettings(){document.getElementById("modal").style.display="flex";}
+function closeSettings(){document.getElementById("modal").style.display="none";}
+
+let soundEnabled=true;
+
+function toggleSound(){
+    soundEnabled=!soundEnabled;
+    document.getElementById("soundState").innerText=soundEnabled?"ON":"OFF";
+}
+
+function toggleMode(){document.body.classList.toggle("light");}
+
+function beep(){
+    if(!soundEnabled) return;
+    let ctx=new AudioContext();
+    let osc=ctx.createOscillator();
+    osc.frequency.value=800;
+    osc.connect(ctx.destination);
+    osc.start();
+    setTimeout(()=>osc.stop(),250);
+}
+
+function alertSound(){beep();setTimeout(beep,200);}
+
+let durations=[30,60,90,120,180];
+let selected=30;
+let time;
+let timer;
+
+let opt=document.getElementById("studyOptions");
+
+function renderButtons(){
+opt.innerHTML="";
+durations.forEach(t=>{
+    let b=document.createElement("button");
+    b.innerText=t+"m";
+    if(t===selected)b.classList.add("selected");
+
+    b.onclick=()=>{
+        selected=t;
+        document.getElementById("selectedInfo").innerText="Selected: "+t+" min";
+        renderButtons();
+    };
+
+    opt.appendChild(b);
+});
+}
+
+renderButtons();
+
+function update(){
+    let m=Math.floor(time/60);
+    let s=time%60;
+    document.getElementById("timerMain").innerText=`${m}:${s<10?"0":""}${s}`;
+}
+
+function startSession(){
+    time=selected*60;
+
+    timer=setInterval(()=>{
+        if(time>0){time--;update();}
+        else{
+            clearInterval(timer);
+            alertSound();
+            startBreak();
+        }
+    },1000);
+}
+
+function pauseTimer(){clearInterval(timer);}
+
+function resetTimer(){clearInterval(timer);time=selected*60;update();}
+
+function startBreak(){
+    let b=parseInt(document.getElementById("breakTime").value)||5;
+    time=b*60;
+
+    timer=setInterval(()=>{
+        if(time>0){time--;update();}
+        else{clearInterval(timer);alertSound();}
+    },1000);
+}
+
+function addTask(){
+    let v=document.getElementById("task").value;
+    if(!v)return;
+    let li=document.createElement("li");
+    li.innerHTML=`${v}<button onclick="this.parentElement.remove()">❌</button>`;
+    document.getElementById("list").appendChild(li);
+}
+
+</script>
+
+</body>
+</html>
