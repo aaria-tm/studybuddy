@@ -31,10 +31,6 @@ Users select a study duration, set a break time, and start a session. The app ru
 2. Open `index.html` in any modern browser
 3. No additional installation required
 
-## Project Structure
-
-* `index.html` – Main application file containing UI and logic
-
 ## Future Improvements
 
 * User login and cloud sync
